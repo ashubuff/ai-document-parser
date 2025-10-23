@@ -1,0 +1,58 @@
+service: ai-pdf-extractor
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: us-east-1  # Change to your preferred region
+  timeout: 300  # 5 minutes (PDF processing + AI can take time)
+  memorySize: 1024  # 1GB RAM for PDF parsing
+  
+  environment:
+    AI_PROVIDER: ${env:AI_PROVIDER, 'openai'}
+    DEFAULT_MODEL: ${env:DEFAULT_MODEL, 'gpt-4o'}
+    OPENAI_API_KEY: ${env:OPENAI_API_KEY, ''}
+    AZURE_OPENAI_API_KEY: ${env:AZURE_OPENAI_API_KEY, ''}
+    AZURE_OPENAI_ENDPOINT: ${env:AZURE_OPENAI_ENDPOINT, ''}
+    AZURE_OPENAI_DEPLOYMENT: ${env:AZURE_OPENAI_DEPLOYMENT, ''}
+    AZURE_OPENAI_API_VERSION: ${env:AZURE_OPENAI_API_VERSION, '2024-02-15-preview'}
+  
+  # API Gateway configuration
+  httpApi:
+    cors:
+      allowedOrigins:
+        - '*'  # Change to specific domains in production
+      allowedHeaders:
+        - Content-Type
+        - X-Auth-Key
+      allowedMethods:
+        - GET
+        - POST
+        - OPTIONS
+
+functions:
+  api:
+    handler: lambda.handler
+    events:
+      - httpApi:
+          path: /extractText
+          method: POST
+      - httpApi:
+          path: /extract
+          method: POST
+      - httpApi:
+          path: /api/config
+          method: GET
+      - httpApi:
+          path: /api/key
+          method: GET
+
+plugins:
+  - serverless-offline  # For local testing
+
+custom:
+  serverless-offline:
+    httpPort: 3000
+
+

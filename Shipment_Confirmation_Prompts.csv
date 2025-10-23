@@ -1,0 +1,44 @@
+Field Name,Example Value,AI Prompt / Explanation
+Load Number,714129,"Identify the unique shipment or load identifier mentioned in the document. It usually appears near the title or header, e.g., “Load Number: 714129.”"
+Carrier Name,"Shaker Transport, Inc.",Extract the carrier company responsible for transporting the shipment.
+Carrier Contact,(p) 518-879-2827 (f),Provide the phone and/or fax contact details of the carrier company.
+Carrier Address,"154 Hudson River Road, Waterford, NY 12188",Extract the complete address of the carrier or logistics company listed at the top of the document.
+Contact Person,Madison Beddows,Find the name of the primary contact person associated with the shipment.
+Contact Email,madisonb@shipwithshaker.com,Extract the email address of the person mentioned as the contact for the shipment.
+Date,09/26/2025,Capture the date when the load confirmation was created or issued.
+Equipment Type,Dry Van 53',"Identify the type of transportation equipment used for the shipment (e.g., Dry Van, Reefer, Flatbed, etc.)."
+Other Instructions,DRY TANKER,Extract any additional handling or equipment instructions provided in the shipment details.
+Tanker Endorsement Required,Yes,Determine whether a tanker endorsement is mandatory for this load.
+HazMat,,Specify if the shipment involves hazardous materials (Yes/No or specify material).
+Temperature Controlled,,Indicate if the shipment requires temperature control.
+Temperature Range,,Extract minimum and maximum temperature settings if applicable.
+Carrier Notes,,Capture any additional notes written for the carrier.
+Shipper Name,WESTLAKE LAKELAND DISTRIBUTION,Identify the name of the shipper (pickup location).
+Shipper Address,"2525 S COMBEE RD, LAKELAND, FL 33801",Extract the full pickup address.
+Shipper Expected Date,09/30/2025,The scheduled date when the shipment will be picked up.
+Shipper Hours,08:00-14:00,Mention the working hours during which pickup is allowed.
+Appointment Required (Pickup),No,State whether an appointment is required for pickup.
+Appointment Time (Pickup),,Extract the scheduled pickup appointment time if available.
+Shipper Contact,WAREHOUSE 4 863-669-2534,Identify the name and phone number of the contact person at the pickup location.
+Pickup Instructions,A reefer trailer should not be used…,Summarize any special pickup instructions or guidelines mentioned in the document.
+Shipper References,,Extract any reference numbers or internal IDs related to the shipper.
+Pickup/Delivery Number,4502929229 / 87928340,Provide the reference numbers associated with this shipment at both pickup and delivery ends.
+Consignee Name,WESTLAKE DELTA WAREHOUSE,Identify the recipient (delivery) warehouse or company.
+Consignee Address,"5515 Ameriport Parkway, Baytown, TX 77523",Extract the complete delivery address.
+Consignee Expected Date,10/02/2025,The date the shipment is expected to be delivered at the destination.
+Consignee Hours,08:00-15:30,Provide the receiving hours during which delivery can occur.
+Appointment Required (Delivery),Yes,Mention whether a delivery appointment is mandatory.
+Appointment Time (Delivery),10:00,Extract the exact time scheduled for delivery.
+Consignee Contact,Traffic Coordinator 518-690-4580,Provide the contact person and phone number at the delivery location.
+Delivery Instructions,Drivers will not be accepted after 15:30,Include any specific rules or restrictions related to delivery.
+Consignee References,,Extract any delivery-related reference numbers or codes if available.
+Commodity Description,Plastics or Dry Resin Totes,Describe the main product or material being transported.
+Handling Unit Quantity,,"Indicate how many handling units (e.g., pallets, totes, etc.) are in the shipment."
+Package Quantity,,Extract the number of packages if specified.
+Weight,39726 lbs,Capture the total shipment weight in pounds or kilograms.
+Cargo Summary,"Plastics or Dry Resin Totes, 39726 lbs",Provide a summary of the commodity and weight for quick overview.
+Net Freight Charges,"USD 1,514.75",Extract the base cost charged for the transportation service.
+Fuel Surcharge,USD 348.39,Identify the additional cost added as a fuel surcharge.
+Total Cost,"USD 1,863.14",Compute or extract the total payable amount for the load.
+Payment Instructions,Proof of delivery must be sent to carrierpay@shipwithshaker.com within 24 hours...,Summarize payment terms or proof-of-delivery requirements mentioned in the note section.
+Penalty Clauses,5% rate reduction for failure to track…,Identify any penalties or rate reductions applicable for non-compliance with terms.

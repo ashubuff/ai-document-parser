@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shaker Logistics - Shipment Confirmation Extractor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .section h2 {
+            font-size: 20px;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .file-drop-zone {
+            border: 3px dashed #1e3c72;
+            border-radius: 8px;
+            padding: 60px 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #f0f4f8;
+        }
+
+        .file-drop-zone:hover {
+            background: #e6eef6;
+            border-color: #2a5298;
+        }
+
+        .file-drop-zone.dragover {
+            background: #1e3c72;
+            color: white;
+        }
+
+        .file-drop-zone svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 20px;
+            opacity: 0.6;
+        }
+
+        .file-drop-zone h3 {
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+
+        .file-drop-zone p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .file-name {
+            margin-top: 15px;
+            padding: 15px;
+            background: #e8f5e9;
+            border-radius: 6px;
+            display: none;
+        }
+
+        .file-name.show {
+            display: block;
+        }
+
+        .file-name strong {
+            color: #2e7d32;
+        }
+
+        .btn {
+            padding: 14px 32px;
+            border: none;
+            border-radius: 6px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(30, 60, 114, 0.4);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status {
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .status.show {
+            display: block;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .results {
+            background: #f0f4f8;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 30px;
+            display: none;
+        }
+
+        .results.show {
+            display: block;
+        }
+
+        .results h3 {
+            margin-bottom: 20px;
+            color: #333;
+            font-size: 22px;
+        }
+
+        .result-grid {
+            display: grid;
+            gap: 15px;
+        }
+
+        .result-item {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #1e3c72;
+        }
+
+        .result-item label {
+            display: block;
+            font-weight: 600;
+            color: #555;
+            font-size: 13px;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .result-item .value {
+            color: #222;
+            font-size: 16px;
+            word-wrap: break-word;
+        }
+
+        .result-item .value.empty {
+            color: #999;
+            font-style: italic;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 4px;
+            font-size: 15px;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #1e3c72;
+            box-shadow: 0 0 0 3px rgba(30, 60, 114, 0.1);
+        }
+
+        .form-input.populated {
+            background-color: #f0f9ff;
+            border-color: #2196F3;
+        }
+
+        .form-input.edited {
+            background-color: #fff8e1;
+            border-color: #FFC107;
+        }
+
+        .form-input.empty {
+            background-color: #fafafa;
+            color: #999;
+        }
+
+        .form-input.empty::placeholder {
+            color: #bbb;
+            font-style: italic;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #1e3c72;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .json-toggle {
+            margin-top: 20px;
+            text-align: center;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .json-toggle button {
+            background: #1e3c72;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .json-toggle button:hover {
+            background: #2a5298;
+            transform: translateY(-2px);
+        }
+
+        .json-view {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .json-view.show {
+            display: block;
+        }
+
+        .json-view pre {
+            margin: 0;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚛 Shaker Logistics - Shipment Extractor</h1>
+            <p>AI-powered extraction of shipment confirmation details</p>
+        </div>
+
+        <div class="content">
+            <div id="status" class="status"></div>
+
+            <!-- File Upload Section -->
+            <div class="section">
+                <h2>📄 Upload Shipment Confirmation</h2>
+                <input type="file" id="fileInput" accept=".pdf" style="display: none;" />
+                <div class="file-drop-zone" id="fileDropZone" onclick="document.getElementById('fileInput').click()">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    <h3>Upload Shipment Confirmation PDF</h3>
+                    <p>Click to browse or drag and drop your load confirmation document here</p>
+                </div>
+                <div id="fileName" class="file-name"></div>
+            </div>
+
+            <!-- Extract Button -->
+            <div class="section">
+                <button class="btn btn-primary" id="extractBtn" disabled>
+                    🚀 Extract Shipment Information
+                </button>
+            </div>
+
+            <!-- Results Section -->
+            <div class="results" id="results">
+                <h3>✅ Extracted Shipment Information</h3>
+                <div id="resultsGrid" class="result-grid"></div>
+                
+                <div class="json-toggle">
+                    <button onclick="exportData()">💾 Export Data</button>
+                    <button onclick="toggleJson()">📋 View JSON</button>
+                </div>
+                <div id="jsonView" class="json-view"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load docToFields library -->
+    <script src="./docToFields.js"></script>
+    
+    <script>
+        // ============================================
+        // CONFIGURATION - LOADED FROM SERVER
+        // ============================================
+        let CONFIG = {
+            serverUrl: 'http://localhost:3000',
+            // These will be loaded from server
+            provider: null,
+            apiKey: null,
+            model: null,
+            azureEndpoint: null,
+            azureDeployment: null,
+            azureApiVersion: null
+        };
+
+        // Shipment Fields configuration from Shipment_Confirmation_Prompts.csv
+        const FIELDS = [
+            { name: 'Load_Number', description: 'Identify the unique shipment or load identifier mentioned in the document. It usually appears near the title or header, e.g., "Load Number: 714129."' },
+            { name: 'Shipment_Name', description: 'Extract the carrier company responsible for transporting the shipment.' },
+            { name: 'Carrier_Contact', description: 'Provide the phone and/or fax contact details of the carrier company.' },
+            { name: 'Carrier_Address', description: 'Extract the complete address of the carrier or logistics company listed at the top of the document.' },
+            { name: 'Contact_Person', description: 'Find the name of the primary contact person associated with the shipment.' },
+            { name: 'Contact_Email', description: 'Extract the email address of the person mentioned as the contact for the shipment.' },
+            { name: 'Date', description: 'Capture the date when the load confirmation was created or issued.' },
+            { name: 'Equipment_Type', description: 'Identify the type of transportation equipment used for the shipment (e.g., Dry Van, Reefer, Flatbed, etc.).' },
+            { name: 'Other_Instructions', description: 'Extract any additional handling or equipment instructions provided in the shipment details.' },
+            { name: 'Tanker_Endorsement_Required', description: 'Determine whether a tanker endorsement is mandatory for this load.' },
+            { name: 'HazMat', description: 'Specify if the shipment involves hazardous materials (Yes/No or specify material).' },
+            { name: 'Temperature_Controlled', description: 'Indicate if the shipment requires temperature control.' },
+            { name: 'Temperature_Range', description: 'Extract minimum and maximum temperature settings if applicable.' },
+            { name: 'Carrier_Notes', description: 'Capture any additional notes written for the carrier.' },
+            { name: 'Shipper_Name', description: 'Identify the name of the shipper (pickup location).' },
+            { name: 'Shipper_Address', description: 'Extract the full pickup address.' },
+            { name: 'Shipper_Expected_Date', description: 'The scheduled date when the shipment will be picked up.' },
+            { name: 'Shipper_Hours', description: 'Mention the working hours during which pickup is allowed.' },
+            { name: 'Appointment_Required_Pickup', description: 'State whether an appointment is required for pickup.' },
+            { name: 'Appointment_Time_Pickup', description: 'Extract the scheduled pickup appointment time if available.' },
+            { name: 'Shipper_Contact', description: 'Identify the name and phone number of the contact person at the pickup location.' },
+            { name: 'Pickup_Instructions', description: 'Summarize any special pickup instructions or guidelines mentioned in the document.' },
+            { name: 'Shipper_References', description: 'Extract any reference numbers or internal IDs related to the shipper.' },
+            { name: 'Pickup_Delivery_Number', description: 'Provide the reference numbers associated with this shipment at both pickup and delivery ends.' },
+            { name: 'Consignee_Name', description: 'Identify the recipient (delivery) warehouse or company.' },
+            { name: 'Consignee_Address', description: 'Extract the complete delivery address.' },
+            { name: 'Consignee_Expected_Date', description: 'The date the shipment is expected to be delivered at the destination.' },
+            { name: 'Consignee_Hours', description: 'Provide the receiving hours during which delivery can occur.' },
+            { name: 'Appointment_Required_Delivery', description: 'Mention whether a delivery appointment is mandatory.' },
+            { name: 'Appointment_Time_Delivery', description: 'Extract the exact time scheduled for delivery.' },
+            { name: 'Consignee_Contact', description: 'Provide the contact person and phone number at the delivery location.' },
+            { name: 'Delivery_Instructions', description: 'Include any specific rules or restrictions related to delivery.' },
+            { name: 'Consignee_References', description: 'Extract any delivery-related reference numbers or codes if available.' },
+            { name: 'Commodity_Description', description: 'Describe the main product or material being transported.' },
+            { name: 'Handling_Unit_Quantity', description: 'Indicate how many handling units (e.g., pallets, totes, etc.) are in the shipment.' },
+            { name: 'Package_Quantity', description: 'Extract the number of packages if specified.' },
+            { name: 'Weight', description: 'Capture the total shipment weight in pounds or kilograms.' },
+            { name: 'Cargo_Summary', description: 'Provide a summary of the commodity and weight for quick overview.' },
+            { name: 'Net_Freight_Charges', description: 'Extract the base cost charged for the transportation service.' },
+            { name: 'Fuel_Surcharge', description: 'Identify the additional cost added as a fuel surcharge.' },
+            { name: 'Total_Cost', description: 'Compute or extract the total payable amount for the load.' },
+            { name: 'Payment_Instructions', description: 'Summarize payment terms or proof-of-delivery requirements mentioned in the note section.' },
+            { name: 'Penalty_Clauses', description: 'Identify any penalties or rate reductions applicable for non-compliance with terms.' }
+        ];
+
+        // ============================================
+        // APPLICATION CODE
+        // ============================================
+        let docsToFields;
+        let selectedFile = null;
+        let extractedData = null;
+        let configLoaded = false;
+
+        // Load configuration from server
+        async function loadConfig() {
+            try {
+                // Load config and API key in parallel
+                const [configRes, keyRes] = await Promise.all([
+                    fetch(`${CONFIG.serverUrl}/api/config`),
+                    fetch(`${CONFIG.serverUrl}/api/key`)
+                ]);
+
+                const config = await configRes.json();
+                const keyData = await keyRes.json();
+
+                // Merge into CONFIG
+                CONFIG.provider = config.provider;
+                CONFIG.model = config.model;
+                CONFIG.azureEndpoint = config.azureEndpoint;
+                CONFIG.azureDeployment = config.azureDeployment;
+                CONFIG.azureApiVersion = config.azureApiVersion;
+                CONFIG.apiKey = keyData.apiKey;
+
+                configLoaded = true;
+
+                // Validate configuration
+                if (!CONFIG.apiKey) {
+                    showStatus('⚠️ Please configure your API key in the .env file', 'error');
+                } else {
+                    const providerName = CONFIG.provider === 'azure' ? 'Azure OpenAI' : 'OpenAI';
+                    showStatus(`✓ Configuration loaded: Using ${providerName}`, 'success');
+                }
+            } catch (error) {
+                showStatus('❌ Failed to load configuration from server', 'error');
+                console.error('Config load error:', error);
+            }
+        }
+
+        // Initialize
+        async function init() {
+            // Load configuration from server
+            await loadConfig();
+
+            // Setup file input
+            document.getElementById('fileInput').addEventListener('change', handleFileSelect);
+            
+            // Setup drag and drop
+            const dropZone = document.getElementById('fileDropZone');
+            dropZone.addEventListener('dragover', handleDragOver);
+            dropZone.addEventListener('dragleave', handleDragLeave);
+            dropZone.addEventListener('drop', handleDrop);
+
+            // Setup extract button
+            document.getElementById('extractBtn').addEventListener('click', extractData);
+        }
+
+        // File handling
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            handleFile(file);
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('dragover');
+        }
+
+        function handleDragLeave(e) {
+            e.currentTarget.classList.remove('dragover');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        }
+
+        function handleFile(file) {
+            if (file && file.type === 'application/pdf') {
+                selectedFile = file;
+                const fileNameDiv = document.getElementById('fileName');
+                fileNameDiv.innerHTML = `<strong>Selected:</strong> ${file.name}`;
+                fileNameDiv.classList.add('show');
+                document.getElementById('extractBtn').disabled = false;
+                showStatus(`✓ PDF file selected: ${file.name}`, 'success');
+            } else {
+                showStatus('❌ Please select a valid PDF file', 'error');
+            }
+        }
+
+        // Extract data
+        async function extractData() {
+            if (!selectedFile) {
+                showStatus('❌ Please select a PDF file first', 'error');
+                return;
+            }
+
+            // Validate configuration
+            if (!configLoaded) {
+                showStatus('❌ Configuration not loaded. Please refresh the page.', 'error');
+                return;
+            }
+
+            if (!CONFIG.apiKey) {
+                showStatus('❌ Please configure your API key in the .env file', 'error');
+                return;
+            }
+            
+            if (CONFIG.provider === 'azure' && !CONFIG.azureEndpoint) {
+                showStatus('❌ Azure OpenAI endpoint not configured in .env file', 'error');
+                return;
+            }
+
+            // Show loading
+            const extractBtn = document.getElementById('extractBtn');
+            extractBtn.disabled = true;
+            extractBtn.textContent = '⏳ Extracting...';
+            showStatus('🔄 Processing document... This may take 30-60 seconds', 'info');
+
+            // Hide previous results
+            document.getElementById('results').classList.remove('show');
+
+            try {
+                // Use the API key from server (already set based on provider)
+                const authKey = CONFIG.apiKey;
+                
+                // Initialize DocsToFields with auto-viewer enabled
+                docsToFields = new DocsToFields({
+                    authKey: authKey,
+                    url: CONFIG.serverUrl,
+                    viewerUrl: CONFIG.serverUrl + '/viewer',
+                    model: CONFIG.model,
+                    systemPrompt: 'You are an expert logistics assistant specializing in shipment confirmations. Extract information accurately from shipment and load confirmation documents. Always return valid JSON with all requested fields.',
+                    autoOpenViewer: true,  // Automatically open viewer after extraction
+                    viewerCallback: (result) => {
+                        // Called when user clicks Apply in viewer
+                        if (result.fields) {
+                            extractedData = result.fields;
+                            displayResults(result.fields);
+                            showStatus('✅ Extraction completed and reviewed!', 'success');
+                            extractBtn.disabled = false;
+                            extractBtn.textContent = '🚀 Extract Shipment Information';
+                        }
+                    },
+                    aiConfig: {
+                        provider: CONFIG.provider,
+                        azureEndpoint: CONFIG.azureEndpoint,
+                        azureDeployment: CONFIG.azureDeployment,
+                        azureApiVersion: CONFIG.azureApiVersion
+                    }
+                });
+
+                // Add all fields
+                FIELDS.forEach(field => {
+                    docsToFields.addField(field);
+                });
+
+                // Extract text from PDF
+                showStatus('📄 Extracting text from PDF...', 'info');
+                await docsToFields.fileExtractText(selectedFile);
+
+                // Get fields using AI (will auto-open viewer after extraction)
+                showStatus('🤖 Analyzing document with AI...', 'info');
+                const results = await docsToFields.getFields();
+                
+                // Store results temporarily (viewer callback will update display)
+                extractedData = results;
+                showStatus('📋 Opening viewer for review...', 'info');
+                
+            } catch (error) {
+                showStatus('❌ Error: ' + error.message, 'error');
+                console.error('Extraction error:', error);
+                extractBtn.disabled = false;
+                extractBtn.textContent = '🚀 Extract Shipment Information';
+            }
+        }
+
+        // Display results as editable form
+        function displayResults(data) {
+            const resultsDiv = document.getElementById('results');
+            const gridDiv = document.getElementById('resultsGrid');
+            
+            gridDiv.innerHTML = '';
+
+            // Create form fields for each field
+            FIELDS.forEach(field => {
+                const value = data[field.name];
+                const item = document.createElement('div');
+                item.className = 'result-item';
+                
+                const label = document.createElement('label');
+                label.textContent = field.name.replace(/_/g, ' ');
+                label.setAttribute('for', 'field-' + field.name);
+                
+                // Create input field
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.id = 'field-' + field.name;
+                input.name = field.name;
+                input.className = 'form-input';
+                input.placeholder = 'Not found in document';
+                
+                if (value && value.toString().trim() !== '') {
+                    input.value = value;
+                    input.classList.add('populated');
+                } else {
+                    input.classList.add('empty');
+                }
+                
+                // Add change event to mark as edited
+                input.addEventListener('input', () => {
+                    input.classList.remove('empty');
+                    input.classList.add('populated', 'edited');
+                });
+                
+                item.appendChild(label);
+                item.appendChild(input);
+                gridDiv.appendChild(item);
+            });
+
+            // Show JSON
+            const jsonView = document.getElementById('jsonView');
+            jsonView.innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+
+            resultsDiv.classList.add('show');
+            
+            // Scroll to results
+            setTimeout(() => {
+                resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+        }
+
+        // Export form data
+        window.exportData = function() {
+            const formData = {};
+            FIELDS.forEach(field => {
+                const input = document.getElementById('field-' + field.name);
+                if (input) {
+                    formData[field.name] = input.value;
+                }
+            });
+            
+            // Download as JSON
+            const dataStr = JSON.stringify(formData, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `shipment_data_${new Date().getTime()}.json`;
+            link.click();
+            URL.revokeObjectURL(url);
+            
+            showStatus('✅ Data exported successfully!', 'success');
+        };
+
+        // Toggle JSON view
+        window.toggleJson = function() {
+            const jsonView = document.getElementById('jsonView');
+            const isShowing = jsonView.classList.toggle('show');
+            
+            // Update JSON content with current form values
+            if (isShowing) {
+                const formData = {};
+                FIELDS.forEach(field => {
+                    const input = document.getElementById('field-' + field.name);
+                    if (input) {
+                        formData[field.name] = input.value;
+                    }
+                });
+                jsonView.innerHTML = '<pre>' + JSON.stringify(formData, null, 2) + '</pre>';
+            }
+        };
+
+        // Show status message
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = 'status show ' + type;
+            
+            if (type === 'success') {
+                setTimeout(() => {
+                    statusDiv.classList.remove('show');
+                }, 5000);
+            }
+        }
+
+        // Initialize on load
+        init();
+    </script>
+</body>
+</html>
+

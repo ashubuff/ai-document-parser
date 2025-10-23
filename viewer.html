@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Field Extractor - Viewer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            background: #f5f5f5;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .fields-panel {
+            width: 400px;
+            background: white;
+            border-right: 1px solid #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 2px 0 8px rgba(0,0,0,0.1);
+        }
+
+        .panel-header {
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .panel-header h1 {
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+
+        .panel-header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .fields-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .field-group {
+            margin-bottom: 20px;
+        }
+
+        .field-group label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .field-description {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 8px;
+            font-style: italic;
+        }
+
+        .field-group input,
+        .field-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+            font-family: inherit;
+        }
+
+        .field-group input:focus,
+        .field-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .field-group textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        .loading-indicator {
+            padding: 20px;
+            text-align: center;
+            color: #666;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .panel-footer {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+            margin-bottom: 10px;
+        }
+
+        .btn-secondary:hover {
+            background: #f8f9ff;
+        }
+
+        .pdf-panel {
+            flex: 1;
+            background: #525252;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: auto;
+            padding: 20px;
+        }
+
+        .pdf-viewer {
+            background: white;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            max-width: 100%;
+            max-height: 100%;
+            border-radius: 4px;
+        }
+
+        .pdf-placeholder {
+            text-align: center;
+            color: white;
+        }
+
+        .pdf-placeholder svg {
+            width: 120px;
+            height: 120px;
+            opacity: 0.5;
+            margin-bottom: 20px;
+        }
+
+        .status-message {
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .field-group.populated input,
+        .field-group.populated textarea {
+            border-color: #28a745;
+            background: #f8fff9;
+        }
+
+        .settings-info {
+            padding: 15px;
+            background: #f8f9ff;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #666;
+        }
+
+        .settings-info strong {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Left Panel: Fields -->
+        <div class="fields-panel">
+            <div class="panel-header">
+                <h1>Document Fields</h1>
+                <p>AI-powered field extraction</p>
+            </div>
+            
+            <div class="fields-content" id="fieldsContent">
+                <div id="statusMessage"></div>
+                <div id="settingsInfo" class="settings-info" style="display: none;"></div>
+                <div id="fieldsContainer">
+                    <div class="loading-indicator">
+                        <div class="spinner"></div>
+                        <p>Waiting for fields...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel-footer">
+                <button class="btn btn-secondary" id="extractBtn" style="display: none;">
+                    Extract Fields with AI
+                </button>
+                <button class="btn btn-primary" id="applyBtn" disabled>
+                    Apply & Close
+                </button>
+            </div>
+        </div>
+
+        <!-- Right Panel: PDF Viewer -->
+        <div class="pdf-panel" id="pdfPanel">
+            <div class="pdf-placeholder">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+                <h2>PDF Preview</h2>
+                <p>Upload a PDF to view it here</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let fields = [];
+        let extractedValues = {};
+        let apiKey = '';
+        let settings = {};
+        let pdfFile = null;
+
+        // Initialize communication with parent window
+        window.addEventListener('load', () => {
+            // Notify parent window that viewer is ready
+            if (window.opener) {
+                window.opener.postMessage(JSON.stringify({
+                    init: true,
+                    source: 'doc2fields-viewer'
+                }), '*');
+            }
+        });
+
+        // Listen for messages from parent window
+        window.addEventListener('message', async (event) => {
+            try {
+                const message = JSON.parse(event.data);
+                
+                if (message.source !== 'docstofields') return;
+
+                switch (message.type) {
+                    case 'fields':
+                        fields = message.fields;
+                        renderFields();
+                        break;
+                    
+                    case 'key':
+                        apiKey = message.key;
+                        updateSettingsInfo();
+                        break;
+                    
+                    case 'settings':
+                        settings = message.settings;
+                        updateSettingsInfo();
+                        break;
+                    
+                    case 'file':
+                        pdfFile = message.file;
+                        displayPDF(message.file);
+                        break;
+                    
+                    case 'fieldValues':
+                        extractedValues = message.fieldValues;
+                        populateFields(message.fieldValues);
+                        break;
+
+                    case 'showFields':
+                        // Handle show/hide fields if needed
+                        break;
+                }
+            } catch (error) {
+                console.error('Error parsing message:', error);
+            }
+        });
+
+        // Update settings info display
+        function updateSettingsInfo() {
+            const infoDiv = document.getElementById('settingsInfo');
+            if (settings.model) {
+                infoDiv.style.display = 'block';
+                infoDiv.innerHTML = `
+                    <strong>AI Model:</strong> ${settings.model || 'Not set'}<br>
+                    <strong>API Key:</strong> ${apiKey ? '✓ Configured' : '✗ Not set'}
+                `;
+                
+                // Show extract button if we have fields and API key
+                if (fields.length > 0 && apiKey && pdfFile) {
+                    document.getElementById('extractBtn').style.display = 'block';
+                }
+            }
+        }
+
+        // Render fields in the left panel
+        function renderFields() {
+            const container = document.getElementById('fieldsContainer');
+            
+            if (fields.length === 0) {
+                container.innerHTML = `
+                    <div class="loading-indicator">
+                        <p>No fields configured</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = fields.map(field => `
+                <div class="field-group" data-field="${field.name}">
+                    <label>${field.name.replace(/_/g, ' ')}</label>
+                    ${field.type === 'textarea' ? 
+                        `<textarea id="field-${field.name}" placeholder="Enter ${field.name.replace(/_/g, ' ')}"></textarea>` :
+                        `<input type="text" id="field-${field.name}" placeholder="Enter ${field.name.replace(/_/g, ' ')}" />`
+                    }
+                </div>
+            `).join('');
+
+            // Enable apply button when any field is edited
+            container.querySelectorAll('input, textarea').forEach(input => {
+                input.addEventListener('input', () => {
+                    document.getElementById('applyBtn').disabled = false;
+                    input.parentElement.classList.add('populated');
+                });
+            });
+
+            updateSettingsInfo();
+        }
+
+        // Populate fields with extracted values
+        function populateFields(values) {
+            showStatus('Fields extracted successfully!', 'success');
+            
+            Object.keys(values).forEach(fieldName => {
+                const input = document.getElementById(`field-${fieldName}`);
+                if (input) {
+                    input.value = values[fieldName];
+                    input.parentElement.classList.add('populated');
+                }
+            });
+
+            document.getElementById('applyBtn').disabled = false;
+        }
+
+        // Display PDF in the right panel
+        function displayPDF(base64File) {
+            const pdfPanel = document.getElementById('pdfPanel');
+            
+            // Create iframe to display PDF
+            const iframe = document.createElement('iframe');
+            iframe.className = 'pdf-viewer';
+            iframe.style.width = '100%';
+            iframe.style.height = '100%';
+            iframe.style.border = 'none';
+            iframe.src = base64File.base64;
+            
+            pdfPanel.innerHTML = '';
+            pdfPanel.appendChild(iframe);
+        }
+
+        // Extract fields using AI
+        document.getElementById('extractBtn').addEventListener('click', async () => {
+            const btn = document.getElementById('extractBtn');
+            btn.disabled = true;
+            btn.textContent = 'Extracting...';
+            
+            showStatus('Extracting fields with AI...', 'info');
+
+            try {
+                // This triggers the extraction in the parent window
+                // The parent window will call the API and send back results
+                if (window.opener) {
+                    window.opener.postMessage(JSON.stringify({
+                        action: 'extract',
+                        source: 'doc2fields-viewer'
+                    }), '*');
+                }
+            } catch (error) {
+                showStatus('Error extracting fields: ' + error.message, 'error');
+                btn.disabled = false;
+                btn.textContent = 'Extract Fields with AI';
+            }
+        });
+
+        // Apply button - send values back to parent
+        document.getElementById('applyBtn').addEventListener('click', () => {
+            const fieldValues = {};
+            
+            fields.forEach(field => {
+                const input = document.getElementById(`field-${field.name}`);
+                if (input) {
+                    fieldValues[field.name] = input.value;
+                }
+            });
+
+            // Send extracted fields back to parent window
+            if (window.opener) {
+                window.opener.postMessage(JSON.stringify({
+                    extractedFields: fieldValues,
+                    source: 'doc2fields-viewer'
+                }), '*');
+            }
+
+            showStatus('Values applied! Closing window...', 'success');
+            
+            // Close window after a short delay
+            setTimeout(() => {
+                window.close();
+            }, 1000);
+        });
+
+        // Show status message
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.innerHTML = `<div class="status-message status-${type}">${message}</div>`;
+            
+            if (type === 'success' || type === 'info') {
+                setTimeout(() => {
+                    statusDiv.innerHTML = '';
+                }, 5000);
+            }
+        }
+
+        // Send window position to parent for persistence
+        window.addEventListener('resize', () => {
+            sendWindowInfo();
+        });
+
+        window.addEventListener('move', () => {
+            sendWindowInfo();
+        });
+
+        function sendWindowInfo() {
+            if (window.opener) {
+                window.opener.postMessage(JSON.stringify({
+                    location: { x: window.screenX, y: window.screenY },
+                    size: { width: window.outerWidth, height: window.outerHeight },
+                    source: 'doc2fields-viewer'
+                }), '*');
+            }
+        }
+    </script>
+</body>
+</html>
+

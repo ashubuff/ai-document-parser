@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deposition Document Extractor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .section h2 {
+            font-size: 20px;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .file-drop-zone {
+            border: 3px dashed #667eea;
+            border-radius: 8px;
+            padding: 60px 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #f8f9ff;
+        }
+
+        .file-drop-zone:hover {
+            background: #eef0ff;
+            border-color: #764ba2;
+        }
+
+        .file-drop-zone.dragover {
+            background: #667eea;
+            color: white;
+        }
+
+        .file-drop-zone svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 20px;
+            opacity: 0.6;
+        }
+
+        .file-drop-zone h3 {
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+
+        .file-drop-zone p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .file-name {
+            margin-top: 15px;
+            padding: 15px;
+            background: #e8f5e9;
+            border-radius: 6px;
+            display: none;
+        }
+
+        .file-name.show {
+            display: block;
+        }
+
+        .file-name strong {
+            color: #2e7d32;
+        }
+
+        .btn {
+            padding: 14px 32px;
+            border: none;
+            border-radius: 6px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status {
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .status.show {
+            display: block;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .results {
+            background: #f8f9ff;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 30px;
+            display: none;
+        }
+
+        .results.show {
+            display: block;
+        }
+
+        .results h3 {
+            margin-bottom: 20px;
+            color: #333;
+            font-size: 22px;
+        }
+
+        .result-grid {
+            display: grid;
+            gap: 15px;
+        }
+
+        .result-item {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #667eea;
+        }
+
+        .result-item label {
+            display: block;
+            font-weight: 600;
+            color: #555;
+            font-size: 13px;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .result-item .value {
+            color: #222;
+            font-size: 16px;
+            word-wrap: break-word;
+        }
+
+        .result-item .value.empty {
+            color: #999;
+            font-style: italic;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .json-toggle {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .json-toggle button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .json-view {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .json-view.show {
+            display: block;
+        }
+
+        .json-view pre {
+            margin: 0;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚖️ Deposition Document Extractor</h1>
+            <p>AI-powered extraction of deposition information from PDF documents</p>
+        </div>
+
+        <div class="content">
+            <div id="status" class="status"></div>
+
+            <!-- File Upload Section -->
+            <div class="section">
+                <h2>📄 Upload Deposition Document</h2>
+                <input type="file" id="fileInput" accept=".pdf" style="display: none;" />
+                <div class="file-drop-zone" id="fileDropZone" onclick="document.getElementById('fileInput').click()">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    <h3>Upload PDF Document</h3>
+                    <p>Click to browse or drag and drop your deposition notice here</p>
+                </div>
+                <div id="fileName" class="file-name"></div>
+            </div>
+
+            <!-- Extract Button -->
+            <div class="section">
+                <button class="btn btn-primary" id="extractBtn" disabled>
+                    🚀 Extract Information
+                </button>
+            </div>
+
+            <!-- Results Section -->
+            <div class="results" id="results">
+                <h3>✅ Extracted Information</h3>
+                <div id="resultsGrid" class="result-grid"></div>
+                
+                <div class="json-toggle">
+                    <button onclick="toggleJson()">📋 View JSON</button>
+                </div>
+                <div id="jsonView" class="json-view"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load docToFields library -->
+    <script src="./docToFields.js"></script>
+    
+    <script>
+        // ============================================
+        // CONFIGURATION - LOADED FROM SERVER
+        // ============================================
+        let CONFIG = {
+            serverUrl: 'http://localhost:3000',
+            // These will be loaded from server
+            provider: null,
+            apiKey: null,
+            model: null,
+            azureEndpoint: null,
+            azureDeployment: null,
+            azureApiVersion: null
+        };
+
+        // Fields configuration from CSV
+        const FIELDS = [
+            { name: 'Notes__c', description: 'What additional details are included in this document that may be helpful for preparing for this deposition?' },
+            { name: 'Business_Unit__c', description: '' },
+            { name: 'Case_Name__c', description: 'This is the name of the case filed with the court, for example "John Smith vs. XYZ Corporation"?' },
+            { name: 'Case_Number__c', description: 'What is the case number for this case docket? It could be something like 202316377 or 09-23-00264-CV or 1:23-cv-07179 or 2018CCV-60562-3 or 22-001846-CV-272 or 3:21-cv-02171 or CC-23-06372-A or D-1-GN-21-004958 or DC-23-04465.' },
+            { name: 'Connection_Method__c', description: 'Include any remote video solution mentioned in the deposition notice. The only acceptable values are Zoom, Teams, Google Hangouts, Skype, WebEx. Unless one of those products are explicitly mentioned, leave this blank.' },
+            { name: 'Deponent_Name__c', description: 'The name of the person being deposed. It may be a normal name (such as John B. Smith) or it may be PMK (the person most knowledgeable about a specific topic) or Corporate Representative. It should be formatted with capital letters at the beginning of every name. So if the deposition notice shows JOHN A. SMITH, it should be changed to John A. Smith.' },
+            { name: 'Deposition_Date__c', description: 'Date when the Deposition is scheduled to occur, format should be YYYY-MM-DD. This will always be in the future.' },
+            { name: 'Event_Location__c', description: 'Location where the deponent will be deposed. This may be an office or a home. Some attendees may not be in the same location. This field is where the deponent will be located.' },
+            { name: 'Deposition_Services__c', description: 'The deposition notice may mention additional services. The only acceptable values are Advanced Video Services, Conference Room, Conference Room Coverage, Digital Reporter, Document Technician, Exhibit Handling, Expedite, Expedited Exhibits, Interpreter, LegalView (Remote Video), LegalView Exhibit Manager, Onsite Video Technician, Picture in Picture (PIP), Process Serving, Realtime - Internet, Realtime - Local, Rough Draft, Synchronized Video, Teleconference, Traditional Video, Transcriptionist, Trial Document Technician. "Court Reporter" should be selected by default. If the deposition notice requests a service with a slightly different name, select one of those values closes to the additional service requested on the deposition notice, for example "real time" should be considered the same as "Realtime - Internet".' },
+            { name: 'Deposition_Time__c', description: 'Time when the Deposition is scheduled to occur, format should be hh:mm A example 12:15 AM' },
+            { name: 'Estimated_Duration__c', description: 'If the deposition notice provides an estimate of how hours the deposition will last, include it here. Skip any entry that says that the deposition will continue until completed.' },
+            { name: 'Event_Type__c', description: 'Options include Deposition, Mediation, Arbitration, Examination Under Oath, Hearing. If this is not clear, just leave it blank.' },
+            { name: 'Hiring_Attorney__c', description: 'Name of the attorney noticing the deposition or the attorney who will be conducting the deposition. If it\'s not clear, it will probably be the person who created, authored or signed this document.' },
+            { name: 'Hiring_Firm__c', description: 'The name of the law firm noticing the deposition. If it\'s not clear, it will probably be the law firm of the person who signs this document.' },
+            { name: 'Hiring_Attorney_Email__c', description: 'What is the Email address of the Hiring Attorney?' },
+            { name: 'Jurisdiction_Detailed__c', description: 'What is the jurisdiction of this case? It could be something like Georgia State, Wheeler County, Superior Court or Hawaii District Court or Idaho State, or Texas State, Harris County, 189th District Court or Ada County, District Court or Illinois Central District Court or Illinois Northern Bankruptcy Court.' },
+            { name: 'GuestName__c', description: 'Name of any person besides the hiring attorney who created the deposition notice' },
+            { name: 'GuestEmail__c', description: 'The email address of the Scheduler - anyone besides the hiring attorney who created the deposition notice.' },
+            { name: 'Start_Time_Deposition__c', description: 'Time when the Deposition is scheduled to occur, format should be HH:mm:ss.SSS. For example 09:12:00.000' },
+            { name: 'Stop_Time_deposition__c', description: 'If the document includes a specific time when the deposition will end, please include it in this field - for example, 1 PM. Also, if the document estimates how long the deposition will last, please calculate the stop time based on the start time and the estimated duration. For example, if the deposition begins at 9 AM and is estimated to last 3 hours, then the stop time field would be 13:00:00.000.format should be HH:mm:ss.SSS. For example 09:12:00.000' },
+            { name: 'Time_Zone__c', description: 'Time zone of the deposition. If there are multiple time zones, select the one where the deponent is located. The only valid time zones are Eastern, Central, Mountain, Pacific, Hawaii, Alaska. This may be abbreviated - MST and MDT are abbreviations for Mountain time. If there is no timezone listed, use the time zone from the location of the deposition, for example if the deposition takes place in New York, use Eastern.' }
+        ];
+
+        // ============================================
+        // APPLICATION CODE
+        // ============================================
+        let docsToFields;
+        let selectedFile = null;
+        let extractedData = null;
+        let configLoaded = false;
+
+        // Load configuration from server
+        async function loadConfig() {
+            try {
+                // Load config and API key in parallel
+                const [configRes, keyRes] = await Promise.all([
+                    fetch(`${CONFIG.serverUrl}/api/config`),
+                    fetch(`${CONFIG.serverUrl}/api/key`)
+                ]);
+
+                const config = await configRes.json();
+                const keyData = await keyRes.json();
+
+                // Merge into CONFIG
+                CONFIG.provider = config.provider;
+                CONFIG.model = config.model;
+                CONFIG.azureEndpoint = config.azureEndpoint;
+                CONFIG.azureDeployment = config.azureDeployment;
+                CONFIG.azureApiVersion = config.azureApiVersion;
+                CONFIG.apiKey = keyData.apiKey;
+
+                configLoaded = true;
+
+                // Validate configuration
+                if (!CONFIG.apiKey) {
+                    showStatus('⚠️ Please configure your API key in the .env file', 'error');
+                } else {
+                    const providerName = CONFIG.provider === 'azure' ? 'Azure OpenAI' : 'OpenAI';
+                    showStatus(`✓ Configuration loaded: Using ${providerName}`, 'success');
+                }
+            } catch (error) {
+                showStatus('❌ Failed to load configuration from server', 'error');
+                console.error('Config load error:', error);
+            }
+        }
+
+        // Initialize
+        async function init() {
+            // Load configuration from server
+            await loadConfig();
+
+            // Setup file input
+            document.getElementById('fileInput').addEventListener('change', handleFileSelect);
+            
+            // Setup drag and drop
+            const dropZone = document.getElementById('fileDropZone');
+            dropZone.addEventListener('dragover', handleDragOver);
+            dropZone.addEventListener('dragleave', handleDragLeave);
+            dropZone.addEventListener('drop', handleDrop);
+
+            // Setup extract button
+            document.getElementById('extractBtn').addEventListener('click', extractData);
+        }
+
+        // File handling
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            handleFile(file);
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('dragover');
+        }
+
+        function handleDragLeave(e) {
+            e.currentTarget.classList.remove('dragover');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        }
+
+        function handleFile(file) {
+            if (file && file.type === 'application/pdf') {
+                selectedFile = file;
+                const fileNameDiv = document.getElementById('fileName');
+                fileNameDiv.innerHTML = `<strong>Selected:</strong> ${file.name}`;
+                fileNameDiv.classList.add('show');
+                document.getElementById('extractBtn').disabled = false;
+                showStatus(`✓ PDF file selected: ${file.name}`, 'success');
+            } else {
+                showStatus('❌ Please select a valid PDF file', 'error');
+            }
+        }
+
+        // Extract data
+        async function extractData() {
+            if (!selectedFile) {
+                showStatus('❌ Please select a PDF file first', 'error');
+                return;
+            }
+
+            // Validate configuration
+            if (!configLoaded) {
+                showStatus('❌ Configuration not loaded. Please refresh the page.', 'error');
+                return;
+            }
+
+            if (!CONFIG.apiKey) {
+                showStatus('❌ Please configure your API key in the .env file', 'error');
+                return;
+            }
+            
+            if (CONFIG.provider === 'azure' && !CONFIG.azureEndpoint) {
+                showStatus('❌ Azure OpenAI endpoint not configured in .env file', 'error');
+                return;
+            }
+
+            // Show loading
+            const extractBtn = document.getElementById('extractBtn');
+            extractBtn.disabled = true;
+            extractBtn.textContent = '⏳ Extracting...';
+            showStatus('🔄 Processing document... This may take 30-60 seconds', 'info');
+
+            // Hide previous results
+            document.getElementById('results').classList.remove('show');
+
+            try {
+                // Use the API key from server (already set based on provider)
+                const authKey = CONFIG.apiKey;
+                
+                // Initialize DocsToFields with auto-viewer enabled
+                docsToFields = new DocsToFields({
+                    authKey: authKey,
+                    url: CONFIG.serverUrl,
+                    viewerUrl: CONFIG.serverUrl + '/viewer',
+                    model: CONFIG.model,
+                    systemPrompt: 'You are an expert legal assistant specializing in deposition notices. Extract information accurately from legal documents. Always return valid JSON with all requested fields.',
+                    autoOpenViewer: true,  // Automatically open viewer after extraction
+                    viewerCallback: (result) => {
+                        // Called when user clicks Apply in viewer
+                        if (result.fields) {
+                            extractedData = result.fields;
+                            displayResults(result.fields);
+                            showStatus('✅ Extraction completed and reviewed!', 'success');
+                            extractBtn.disabled = false;
+                            extractBtn.textContent = '🚀 Extract Information';
+                        }
+                    },
+                    aiConfig: {
+                        provider: CONFIG.provider,
+                        azureEndpoint: CONFIG.azureEndpoint,
+                        azureDeployment: CONFIG.azureDeployment,
+                        azureApiVersion: CONFIG.azureApiVersion
+                    }
+                });
+
+                // Add all fields
+                FIELDS.forEach(field => {
+                    docsToFields.addField(field);
+                });
+
+                // Extract text from PDF
+                showStatus('📄 Extracting text from PDF...', 'info');
+                await docsToFields.fileExtractText(selectedFile);
+
+                // Get fields using AI (will auto-open viewer after extraction)
+                showStatus('🤖 Analyzing document with AI...', 'info');
+                const results = await docsToFields.getFields();
+                
+                // Store results temporarily (viewer callback will update display)
+                extractedData = results;
+                showStatus('📋 Opening viewer for review...', 'info');
+                
+            } catch (error) {
+                showStatus('❌ Error: ' + error.message, 'error');
+                console.error('Extraction error:', error);
+                extractBtn.disabled = false;
+                extractBtn.textContent = '🚀 Extract Information';
+            }
+        }
+
+        // Display results
+        function displayResults(data) {
+            const resultsDiv = document.getElementById('results');
+            const gridDiv = document.getElementById('resultsGrid');
+            
+            gridDiv.innerHTML = '';
+
+            // Create grid items for each field
+            FIELDS.forEach(field => {
+                const value = data[field.name];
+                const item = document.createElement('div');
+                item.className = 'result-item';
+                
+                const label = document.createElement('label');
+                label.textContent = field.name.replace('__c', '').replace(/_/g, ' ');
+                
+                const valueDiv = document.createElement('div');
+                valueDiv.className = 'value';
+                
+                if (value && value.toString().trim() !== '') {
+                    valueDiv.textContent = value;
+                } else {
+                    valueDiv.textContent = 'Not found in document';
+                    valueDiv.classList.add('empty');
+                }
+                
+                item.appendChild(label);
+                item.appendChild(valueDiv);
+                gridDiv.appendChild(item);
+            });
+
+            // Show JSON
+            const jsonView = document.getElementById('jsonView');
+            jsonView.innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+
+            resultsDiv.classList.add('show');
+            
+            // Scroll to results
+            setTimeout(() => {
+                resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+        }
+
+        // Toggle JSON view
+        window.toggleJson = function() {
+            const jsonView = document.getElementById('jsonView');
+            jsonView.classList.toggle('show');
+        };
+
+        // Show status message
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = 'status show ' + type;
+            
+            if (type === 'success') {
+                setTimeout(() => {
+                    statusDiv.classList.remove('show');
+                }, 5000);
+            }
+        }
+
+        // Initialize on load
+        init();
+    </script>
+</body>
+</html>

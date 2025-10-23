@@ -1,0 +1,167 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: AI PDF Field Extractor - Serverless Application
+
+Globals:
+  Function:
+    Timeout: 300
+    MemorySize: 1024
+    Runtime: nodejs20.x
+    Environment:
+      Variables:
+        AI_PROVIDER: openai
+        DEFAULT_MODEL: gpt-4o
+        OPENAI_API_KEY: ''
+        AZURE_OPENAI_API_KEY: ''
+        AZURE_OPENAI_ENDPOINT: ''
+        AZURE_OPENAI_DEPLOYMENT: ''
+        AZURE_OPENAI_API_VERSION: '2024-02-15-preview'
+
+Resources:
+  # Lambda Function
+  PDFExtractorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: lambda.handler
+      Description: AI-powered PDF field extraction
+      Events:
+        ExtractTextAPI:
+          Type: HttpApi
+          Properties:
+            Path: /extractText
+            Method: POST
+            ApiId: !Ref PDFExtractorAPI
+        ExtractAPI:
+          Type: HttpApi
+          Properties:
+            Path: /extract
+            Method: POST
+            ApiId: !Ref PDFExtractorAPI
+        GetConfigAPI:
+          Type: HttpApi
+          Properties:
+            Path: /api/config
+            Method: GET
+            ApiId: !Ref PDFExtractorAPI
+        GetKeyAPI:
+          Type: HttpApi
+          Properties:
+            Path: /api/key
+            Method: GET
+            ApiId: !Ref PDFExtractorAPI
+
+  # API Gateway HTTP API
+  PDFExtractorAPI:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      Description: API for PDF field extraction
+      CorsConfiguration:
+        AllowOrigins:
+          - '*'  # Change to specific domains in production
+        AllowHeaders:
+          - Content-Type
+          - X-Auth-Key
+        AllowMethods:
+          - GET
+          - POST
+          - OPTIONS
+        MaxAge: 300
+
+  # S3 Bucket for viewer.html only
+  # Note: docToFields.js is hosted by the implementation platform (e.g., Salesforce)
+  StaticFilesBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${AWS::StackName}-viewer'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+      WebsiteConfiguration:
+        IndexDocument: viewer.html
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders:
+              - '*'
+            AllowedMethods:
+              - GET
+              - HEAD
+            AllowedOrigins:
+              - '*'
+            MaxAge: 3600
+
+  # S3 Bucket Policy
+  StaticFilesBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref StaticFilesBucket
+      PolicyDocument:
+        Statement:
+          - Sid: PublicReadGetObject
+            Effect: Allow
+            Principal: '*'
+            Action: 's3:GetObject'
+            Resource: !Sub '${StaticFilesBucket.Arn}/*'
+
+  # CloudFront Distribution
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Comment: CDN for PDF Extractor static files
+        DefaultRootObject: viewer.html
+        Origins:
+          - Id: S3Origin
+            DomainName: !GetAtt StaticFilesBucket.RegionalDomainName
+            S3OriginConfig:
+              OriginAccessIdentity: ''
+        DefaultCacheBehavior:
+          TargetOriginId: S3Origin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+          CachedMethods:
+            - GET
+            - HEAD
+          ForwardedValues:
+            QueryString: false
+            Cookies:
+              Forward: none
+          Compress: true
+          DefaultTTL: 86400
+          MaxTTL: 31536000
+          MinTTL: 0
+        PriceClass: PriceClass_100
+        ViewerCertificate:
+          CloudFrontDefaultCertificate: true
+
+Outputs:
+  APIEndpoint:
+    Description: API Gateway endpoint URL
+    Value: !Sub 'https://${PDFExtractorAPI}.execute-api.${AWS::Region}.amazonaws.com'
+    Export:
+      Name: !Sub '${AWS::StackName}-APIEndpoint'
+  
+  CloudFrontURL:
+    Description: CloudFront distribution URL for static files
+    Value: !GetAtt CloudFrontDistribution.DomainName
+    Export:
+      Name: !Sub '${AWS::StackName}-CloudFrontURL'
+  
+  StaticFilesBucketName:
+    Description: S3 bucket name for static files
+    Value: !Ref StaticFilesBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-StaticBucket'
+  
+  ViewerURL:
+    Description: URL for the viewer page
+    Value: !Sub 'https://${CloudFrontDistribution.DomainName}/viewer.html'
+    Export:
+      Name: !Sub '${AWS::StackName}-ViewerURL'
+

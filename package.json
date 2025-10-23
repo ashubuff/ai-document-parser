@@ -1,0 +1,42 @@
+{
+  "name": "ai-pdf-extractor",
+  "version": "1.0.0",
+  "description": "AI-powered PDF field extraction system with OpenAI integration",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "lambda:build": "sam build",
+    "lambda:deploy": "sam deploy --guided",
+    "lambda:deploy:fast": "sam build && sam deploy",
+    "lambda:local": "sam local start-api",
+    "lambda:logs": "sam logs --tail",
+    "serverless:deploy": "serverless deploy",
+    "serverless:local": "serverless offline",
+    "serverless:remove": "serverless remove",
+    "deploy:static": "chmod +x deploy-static-files.sh && ./deploy-static-files.sh"
+  },
+  "keywords": [
+    "pdf",
+    "extraction",
+    "openai",
+    "ai",
+    "document-processing"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "openai": "^4.20.1",
+    "pdf-parse": "^1.1.1",
+    "multer": "^1.4.5-lts.1",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "serverless": "^3.38.0",
+    "serverless-offline": "^13.3.0"
+  }
+}
+
